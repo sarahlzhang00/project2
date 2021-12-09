@@ -1,0 +1,171 @@
+---
+title: 'Project 2: Data Mining, Classification, Prediction'
+author: "SDS322E"
+date: ''
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+
+class_diag <- function(score, truth, positive, cutoff=.5){
+
+  pred <- factor(score>cutoff,levels=c("TRUE","FALSE"))
+  truth <- factor(truth==positive, levels=c("TRUE","FALSE"))
+
+  tab<-table(truth, pred)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[1,1]/rowSums(tab)[1]
+  spec=tab[2,2]/rowSums(tab)[2]
+  ppv=tab[1,1]/colSums(tab)[1]
+
+#CALCULATE F1
+  f1=2*(sens*ppv)/(sens+ppv)
+  
+#CALCULATE EXACT AUC
+  truth<-as.numeric(truth=="TRUE")
+  ord<-order(score, decreasing=TRUE)
+  score <- score[ord]; truth <- truth[ord]
+  TPR=cumsum(truth)/max(1,sum(truth))
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  dup<-c(score[-1]>=score[-length(score)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+  round(data.frame(acc,sens,spec,ppv,f1,ba=(sens+spec)/2,auc, row.names = "Metrics"),4)
+}
+```
+
+# Mining, Classification, Prediction
+
+## Sarah Zhang (sz6753)
+
+### Introduction 
+
+The dataset that I chose is the Mroz dataset which I acquired from https://vincentarelbundock.github.io/Rdatasets/datasets.html. This dataset shows data about the U.S. Women's Labor-Force Participation which interested me because I'm a woman who is planning on participating in the labor-force and I'm curious to see how/if some factors affect women's labor-force participation. This dataset has 753 observations and 8 variables. The variables are lfp, k5, k618, age, wc, hc, lwg, and inc. The lfp variable represents a boolean value of whether the woman participates in the labor-force or not. The k5 variable represents the number of children that are 5 years old or younger that the woman has. The k618 variable represents the number of children that are 6-17 years old that the woman has. The age variable represents the age of the woman. The wc variable represents if the woman attended college or not. The hc variable represents if the woman's husband attended college or not. The lwg represents the log expected wage rate of the woman. For women in the labor force, it represents the actual wage rate and for women not in the labor force it represents an imputed value based on the regression of lwg on the other variables. The inc variable represents the income of the woman's family exclusive of wife's income. None of the variables are missing data so there are also 753 observations for each of the variables.
+
+```{R}
+library(tidyverse)
+# read your datasets in here, e.g., with read_csv()
+
+# if your dataset needs tidying, do so here
+
+# any other code here
+mroz <- read_csv('Mroz.csv')
+mroz <- mroz %>% select(-X1)
+head(mroz)
+```
+
+### Cluster Analysis
+
+```{R}
+library(cluster)
+# clustering code here
+sil_width<-vector() #empty vector to hold mean sil width
+mroz_numeric <- mroz %>% select(-wc)  %>% select(-hc) %>% select(-lfp) 
+for(i in 2:10){
+  kms <- kmeans(mroz_numeric,centers=i) #compute k-means solution for each k
+  sil <- silhouette(kms$cluster,dist(mroz_numeric)) #get sil widths
+  sil_width[i]<-mean(sil[,3]) #take averages (higher is better)
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+
+#sil_width<-vector()
+
+#for(i in 2:10){
+#pam_fit <- pam(mroz_numeric, k = i)
+#sil_width[i] <- pam_fit$silinfo$avg.width
+#}
+#ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+
+pam1 <- mroz_numeric %>% pam(k=2)
+pam1
+
+mroz_numeric %>% mutate(cluster=as.factor(pam1$clustering)) %>% 
+ggpairs(columns = 1:5, aes(color=cluster))
+
+#plot(pam1, which=2)
+pam1$silinfo$avg.width
+pam1$silinfo$clus.avg.widths
+```
+```{R}
+plot(pam1, which=2)
+pam1$silinfo$avg.width
+pam1$silinfo$clus.avg.widths
+```
+I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc, of the mroz dataset. From the plot, there seems to be a lot of overlap of the two clusters with the k5, k618, and lwg variables. The age variable also has a lot of overlap but the second cluster is just slightly higher than the first one. The inc variable has the least overlap between the two clusters with the second cluster a bit higher than the first one. Looking at the comparisons between each variable, there doesn't seem to be much of a correlation between them except the inc variable. The scatterplots show both cluster points scattered throughout the plot with no specific pattern and the correlations are also close to 0. Looking at the scattterplots of the inc variable with every other variable, the second cluster points all seem to be higher in income than the first cluster points. The average silhouette width is between 0.26 and 0.5 which indicates that the cluster solution has a weak structure and could be artificial but it is still acceptable. However, cluster structure might just be noise.
+    
+    
+### Dimensionality Reduction with PCA
+
+```{R}
+# PCA code here
+```
+
+Discussions of PCA here. 
+
+###  Linear Classifier
+
+```{R}
+# linear classifier code here
+```
+
+```{R}
+# cross-validation of linear classifier here
+```
+
+Discussion here
+
+### Non-Parametric Classifier
+
+```{R}
+library(caret)
+# non-parametric classifier code here
+```
+
+```{R}
+# cross-validation of np classifier here
+```
+
+Discussion
+
+
+### Regression/Numeric Prediction
+
+```{R}
+# regression model code here
+```
+
+```{R}
+# cross-validation of regression model here
+```
+
+Discussion
+
+### Python 
+
+```{R}
+library(reticulate)
+```
+
+```{python}
+# python code here
+```
+
+Discussion
+
+### Concluding Remarks
+
+Include concluding remarks here, if any
+
+
+
+
