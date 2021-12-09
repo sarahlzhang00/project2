@@ -68,6 +68,7 @@ head(mroz)
 
 ```{R}
 library(cluster)
+library(GGally)
 # clustering code here
 sil_width<-vector() #empty vector to hold mean sil width
 mroz_numeric <- mroz %>% select(-wc)  %>% select(-hc) %>% select(-lfp) 
@@ -101,16 +102,37 @@ plot(pam1, which=2)
 pam1$silinfo$avg.width
 pam1$silinfo$clus.avg.widths
 ```
-I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc, of the mroz dataset. From the plot, there seems to be a lot of overlap of the two clusters with the k5, k618, and lwg variables. The age variable also has a lot of overlap but the second cluster is just slightly higher than the first one. The inc variable has the least overlap between the two clusters with the second cluster a bit higher than the first one. Looking at the comparisons between each variable, there doesn't seem to be much of a correlation between them except the inc variable. The scatterplots show both cluster points scattered throughout the plot with no specific pattern and the correlations are also close to 0. Looking at the scattterplots of the inc variable with every other variable, the second cluster points all seem to be higher in income than the first cluster points. The average silhouette width is between 0.26 and 0.5 which indicates that the cluster solution has a weak structure and could be artificial but it is still acceptable. However, cluster structure might just be noise.
+I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc, of the mroz dataset. From the plot, there seems to be a lot of overlap of the two clusters with the k5, k618, and lwg variables. The age variable also has a lot of overlap but the second cluster is just slightly higher than the first one. The inc variable has the least overlap between the two clusters with the second cluster a bit higher than the first one. Looking at the comparisons between each variable, there doesn't seem to be much of a correlation between them except the inc variable. The scatterplots show both cluster points scattered throughout the plot with no specific pattern or straong relationship and the correlations are also close to 0. Looking at the scattterplots of the inc variable with every other variable, the second cluster points all seem to be higher in income than the first cluster points. The average silhouette width is between 0.26 and 0.5 which indicates that the cluster solution has a weak structure and could be artificial but it is still acceptable. However, the cluster structure might just be noise.
     
     
 ### Dimensionality Reduction with PCA
 
 ```{R}
 # PCA code here
+mroz_numeric_scaled <- mroz_numeric %>% select_if(is.numeric) %>% scale
+mroz_scaled_pca <- princomp(mroz_numeric_scaled)
+# mroz_pca <- princomp(mroz_numeric)
+summary(mroz_scaled_pca, loadings=T)
+
+# determine how many PCs to keep
+eigval <- mroz_scaled_pca$sdev^2
+round(cumsum(eigval)/sum(eigval), 2) 
+
+# plot PCA scores
+mrozdf <- data.frame(PC1=mroz_scaled_pca$scores[, 1], PC2=mroz_scaled_pca$scores[, 2])
+ggplot(mrozdf, aes(PC1, PC2)) + geom_point()
+
+mrozdf <- data.frame(PC1=mroz_scaled_pca$scores[, 1], PC3=mroz_scaled_pca$scores[, 3])
+ggplot(mrozdf, aes(PC1, PC3)) + geom_point()
+
+mrozdf <- data.frame(PC2=mroz_scaled_pca$scores[, 2], PC3=mroz_scaled_pca$scores[, 3])
+ggplot(mrozdf, aes(PC2, PC3)) + geom_point()
 ```
 
-Discussions of PCA here. 
+I performed PCA on all of the numeric variables from the dataset. I decided to keep the first three PCs because they were the only PCs that had a cumulative proportion of variance less than 80% which follows the rule of thumb to "Pick PCs until cumulative proportion of variance is > 80%". PC1 is a k5/k618 vs age axis since Higher scores on PC1 means higher number of children under 18 years old but lower in age of the woman and lower scores on PC1 scores means lower number of children under 18 years old but higher in age of the woman. PC2 is a lwg and inc axis since they have a similar magnitude and the same sign. Higher scores on PC2 means higher log expected wage rate and higher family income and lower scores on PC2 means lower log expected wage rate and lower family income. PC3 is a k5/lwg vs k618/inc axis since they have similar magnitudes but opposite signs. Higher scores on PC3 means higher number of children under 5 years old and higher log expected wage rate but lower number of children 6-18 years old and lower family income and lower scores on PC3 means lower number of children under 5 years old and lower log expected wage rate but higher number of children 6-18 years old and higher family income.
+
+I also plotted the first three PC scores with each other and there doesn't seem to be any correlation or strong relationship among them. The points for the PC1 and PC2 scatterplot are mainly clustered randomly horizontally in the middle with some extreme points along the top, right, and bottom of the plot. The points for the PC1 and PC2 scatterplot are also mainly clustered randomly horizontally in the middle and left side with some extreme points along the top, right, and bottom of the plot. The points for the PC2 and PC3 scatterplot are mainly clustered right in the center of the plot with extreme points all along the sides of the plot. About 74% of the total variance in the dataset is explained by these PCs (first three PCs).
+ 
 
 ###  Linear Classifier
 
