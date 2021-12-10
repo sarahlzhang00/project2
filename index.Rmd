@@ -138,13 +138,47 @@ I also plotted the first three PC scores with each other and there doesn't seem 
 
 ```{R}
 # linear classifier code here
+logistic_fit <- glm(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=mroz, family="binomial")
+
+pred <- predict(logistic_fit, type="response")
+
+class_diag(pred, truth=mroz$lfp, positive="TRUE")
+
+y <- mroz$lfp
+y_hat <- ifelse(mroz$k5>2 , "FALSE", "TRUE")
+table(truth=y, prediction=y_hat) %>% addmargins
 ```
 
 ```{R}
 # cross-validation of linear classifier here
+k=10 #choose number of folds
+
+data <- mroz[sample(nrow(mroz)),] #randomly order rows
+folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) #create folds
+diags <- NULL
+
+for(i in 1:k){
+  
+## Create training and test sets
+train <- data[folds!=i,]
+test <- data[folds==i,]
+truth <- test$lfp ## Truth labels for fold i
+
+## Train model on training set (all but fold i)
+fit <- glm(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=train, family="binomial")
+
+## Test model on test set (fold i)
+probs <- predict(fit, newdata = test, type="response")
+
+## Get diagnostics for fold i
+diags <- rbind(diags, class_diag(probs, truth, positive="TRUE"))
+}
+
+summarize_all(diags,mean)
+
 ```
 
-Discussion here
+I first performed a logistic regression on the numerical variables of the dataset with lfp (labor force participation) as the binary variable to be predicted. The AUC for the logisitic regression model came out to be 0.7307. The AUC (area under curve) quantifies how well we are predicting overall. The AUC for this model isn't that high which means that the performance of the model is fair. I also created a confusion matrix on ... Then, I performed a k-fold cross validation with 10 folds on the data set with the same variables. The AUC for the k-fold CV came out to be 0.7195 which is a decrease from the AUC of the logistic regression model which is a sign of overfitting. This is also shows that the logistic regression model performed the best on the data since its AUC is higher with an AUC of 0.7307 vs an AUC of 0.7195.
 
 ### Non-Parametric Classifier
 
