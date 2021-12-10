@@ -50,15 +50,10 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 ### Introduction 
 
-The dataset that I chose is the Mroz dataset which I acquired from https://vincentarelbundock.github.io/Rdatasets/datasets.html. This dataset shows data about the U.S. Women's Labor-Force Participation which interested me because I'm a woman who is planning on participating in the labor-force and I'm curious to see how/if some factors affect women's labor-force participation. This dataset has 753 observations and 8 variables. The variables are lfp, k5, k618, age, wc, hc, lwg, and inc. The lfp variable represents a boolean value of whether the woman participates in the labor-force or not. The k5 variable represents the number of children that are 5 years old or younger that the woman has. The k618 variable represents the number of children that are 6-17 years old that the woman has. The age variable represents the age of the woman. The wc variable represents if the woman attended college or not. The hc variable represents if the woman's husband attended college or not. The lwg represents the log expected wage rate of the woman. For women in the labor force, it represents the actual wage rate and for women not in the labor force it represents an imputed value based on the regression of lwg on the other variables. The inc variable represents the income of the woman's family exclusive of wife's income. None of the variables are missing data so there are also 753 observations for each of the variables.
+The dataset that I chose is the Mroz dataset which I acquired from https://vincentarelbundock.github.io/Rdatasets/datasets.html. This dataset shows data about the U.S. Women's Labor-Force Participation which interested me because I'm a woman who is planning on participating in the labor-force and I'm curious to see how/if some factors affect women's labor-force participation. This dataset has 753 observations and 8 variables. The variables are lfp (binary), k5 (numeric), k618 (numeric), age (numeric), wc (binary), hc (binary), lwg (numeric), and inc (numeric). The lfp variable represents a boolean value of whether the woman participates in the labor-force or not. The k5 variable represents the number of children that are 5 years old or younger that the woman has. The k618 variable represents the number of children that are 6-17 years old that the woman has. The age variable represents the age of the woman. The wc variable represents if the woman attended college or not. The hc variable represents if the woman's husband attended college or not. The lwg represents the log expected wage rate of the woman. For women in the labor force, it represents the actual wage rate and for women not in the labor force it represents an imputed value based on the regression of lwg on the other variables. The inc variable represents the income of the woman's family exclusive of wife's income. None of the variables are missing data so there are also 753 observations for each of the variables.
 
 ```{R}
 library(tidyverse)
-# read your datasets in here, e.g., with read_csv()
-
-# if your dataset needs tidying, do so here
-
-# any other code here
 mroz <- read_csv('Mroz.csv')
 mroz <- mroz %>% select(-X1)
 head(mroz)
@@ -69,23 +64,15 @@ head(mroz)
 ```{R}
 library(cluster)
 library(GGally)
-# clustering code here
-sil_width<-vector() #empty vector to hold mean sil width
+sil_width<-vector() 
+
 mroz_numeric <- mroz %>% select(-wc)  %>% select(-hc) %>% select(-lfp) 
 for(i in 2:10){
-  kms <- kmeans(mroz_numeric,centers=i) #compute k-means solution for each k
-  sil <- silhouette(kms$cluster,dist(mroz_numeric)) #get sil widths
-  sil_width[i]<-mean(sil[,3]) #take averages (higher is better)
+  kms <- kmeans(mroz_numeric,centers=i)
+  sil <- silhouette(kms$cluster,dist(mroz_numeric))
+  sil_width[i]<-mean(sil[,3])
 }
 ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
-
-#sil_width<-vector()
-
-#for(i in 2:10){
-#pam_fit <- pam(mroz_numeric, k = i)
-#sil_width[i] <- pam_fit$silinfo$avg.width
-#}
-#ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
 
 pam1 <- mroz_numeric %>% pam(k=2)
 pam1
@@ -93,7 +80,6 @@ pam1
 mroz_numeric %>% mutate(cluster=as.factor(pam1$clustering)) %>% 
 ggpairs(columns = 1:5, aes(color=cluster))
 
-#plot(pam1, which=2)
 pam1$silinfo$avg.width
 pam1$silinfo$clus.avg.widths
 ```
@@ -102,7 +88,7 @@ plot(pam1, which=2)
 pam1$silinfo$avg.width
 pam1$silinfo$clus.avg.widths
 ```
-I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc, of the mroz dataset. From the plot, there seems to be a lot of overlap of the two clusters with the k5, k618, and lwg variables. The age variable also has a lot of overlap but the second cluster is just slightly higher than the first one. The inc variable has the least overlap between the two clusters with the second cluster a bit higher than the first one. Looking at the comparisons between each variable, there doesn't seem to be much of a correlation between them except the inc variable. The scatterplots show both cluster points scattered throughout the plot with no specific pattern or straong relationship and the correlations are also close to 0. Looking at the scattterplots of the inc variable with every other variable, the second cluster points all seem to be higher in income than the first cluster points. The average silhouette width is between 0.26 and 0.5 which indicates that the cluster solution has a weak structure and could be artificial but it is still acceptable. However, the cluster structure might just be noise.
+I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc, of the mroz dataset. From the plot, there seems to be a lot of overlap of the two clusters with the k5, k618, and lwg variables. The age variable also has a lot of overlap but the second cluster is just slightly higher than the first one. The inc variable has the least overlap between the two clusters with the second cluster a bit higher than the first one. Looking at the comparisons between each variable, there doesn't seem to be much of a correlation between them except the inc variable. The scatterplots show both cluster points scattered throughout the plot with no specific pattern or strong relationship and the correlations are also close to 0. Looking at the scattterplots of the inc variable with every other variable, the second cluster points all seem to be higher in income than the first cluster points. The average silhouette width is between 0.26 and 0.5 which indicates that the cluster solution has a weak structure and could be artificial but it is still acceptable. However, the cluster structure might just be noise.
     
     
 ### Dimensionality Reduction with PCA
@@ -111,7 +97,6 @@ I performed PAM clustering on the numeric variables, k5, k618, age, lwg, and inc
 # PCA code here
 mroz_numeric_scaled <- mroz_numeric %>% select_if(is.numeric) %>% scale
 mroz_scaled_pca <- princomp(mroz_numeric_scaled)
-# mroz_pca <- princomp(mroz_numeric)
 summary(mroz_scaled_pca, loadings=T)
 
 # determine how many PCs to keep
@@ -151,27 +136,24 @@ table(truth = y, prediction = pred>.5)
 ```{R}
 # cross-validation of linear classifier here
 set.seed(1234)
-k=10 #choose number of folds
+k=10
 
-data <- mroz[sample(nrow(mroz)),] #randomly order rows
-folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) #create folds
+data <- mroz[sample(nrow(mroz)),]
+folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) 
+
 diags <- NULL
 
 for(i in 1:k){
   
-## Create training and test sets
-train <- data[folds!=i,]
-test <- data[folds==i,]
-truth <- test$lfp ## Truth labels for fold i
-
-## Train model on training set (all but fold i)
-fit <- glm(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=train, family="binomial")
-
-## Test model on test set (fold i)
-probs <- predict(fit, newdata = test, type="response")
-
-## Get diagnostics for fold i
-diags <- rbind(diags, class_diag(probs, truth, positive="TRUE"))
+  train <- data[folds!=i,]
+  test <- data[folds==i,]
+  truth <- test$lfp 
+  
+  fit <- glm(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=train, family="binomial")
+  
+  probs <- predict(fit, newdata = test, type="response")
+  
+  diags <- rbind(diags, class_diag(probs, truth, positive="TRUE"))
 }
 
 summarize_all(diags,mean)
@@ -201,24 +183,20 @@ table(truth = y, prediction = pred[,2]>.5)
 set.seed(1234)
 k = 10
 
-data <- mroz[sample(nrow(mroz)),] #randomly order rows
-folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) #create folds
+data <- mroz[sample(nrow(mroz)),]
+folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) 
 
 diags <- NULL
 
 for(i in 1:k){
-  ## Create training and test sets
   train <- data[folds!=i,]
   test <- data[folds==i,]
-  truth <- test$lfp ## Truth labels for fold i
+  truth <- test$lfp 
   
-  ## Train model on training set (all but fold i)
   fit <- knn3(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=train)
   
-  ## Test model on test set (fold i)
   probs <- predict(fit, newdata = test)[,2]
   
-  ## Get diagnostics for fold i
   diags <- rbind(diags, class_diag(probs, truth, positive="TRUE"))
 }
 
@@ -268,17 +246,30 @@ I performed a linear regression on the mroz dataset, predicting income (inc) fro
 
 ```{R}
 library(reticulate)
+use_python("/usr/bin/python3", required = F)
+mroz_children <- mroz[2:3]
+head(mroz_children)
 ```
 
 ```{python}
 # python code here
+import pandas as pd
+data = r.mroz_children
+df = pd.DataFrame.from_dict(data)
+df['total_children'] = df['k5'] + df['k618']
+df.head()
+```
+```{R}
+df <- py$df
+mroz["total_children"] <- df['total_children']
+head(mroz)
 ```
 
-Discussion
+In the first R chunk, I created a new dataset off of the original mroz dataset to only include the k5 and k618 columns which represents the number of children under 5 years old and number of children 6-17 years old, respectively. In the python code chunk, I used 'r.' to get the new R dataset object that I created and converted it to a Pandas dataframe so that I could manipulate it. I added a new column called "total_children" that represented the sum of the number of children under 18. Finally, in the last R code chunk, I used 'py$' to get the pandas dataframe with the new column "total_children" and added that column to the original mroz dataset.
 
 ### Concluding Remarks
 
-Include concluding remarks here, if any
+Overall, I thought it was very interesting to look over this dataset and its variables. As a woman who plans on participating in the labor force, I was curious to see the different factors that could affect labor force participation of women. It was also interesting to see the performance of the different models that I created and trained on. All my models had a fair performance which isn't great but still cool to see that some of the variables, such as k5, k618, age, lwg, and inc, were related enough to make some accurate predictions. I also enjoyed bringing all our class concepts together in this project to see how I can fully analyze data.
 
 
 
