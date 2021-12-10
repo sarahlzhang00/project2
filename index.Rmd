@@ -145,8 +145,7 @@ pred <- predict(logistic_fit, type="response")
 class_diag(pred, truth=mroz$lfp, positive="TRUE")
 
 y <- mroz$lfp
-y_hat <- ifelse(mroz$k5>2 , "FALSE", "TRUE")
-table(truth=y, prediction=y_hat) %>% addmargins
+table(truth = y, prediction = pred>.5)
 ```
 
 ```{R}
@@ -178,20 +177,55 @@ summarize_all(diags,mean)
 
 ```
 
-I first performed a logistic regression on the numerical variables of the dataset with lfp (labor force participation) as the binary variable to be predicted. The AUC for the logisitic regression model came out to be 0.7307. The AUC (area under curve) quantifies how well we are predicting overall. The AUC for this model isn't that high which means that the performance of the model is fair. I also created a confusion matrix on ... Then, I performed a k-fold cross validation with 10 folds on the data set with the same variables. The AUC for the k-fold CV came out to be 0.7195 which is a decrease from the AUC of the logistic regression model which is a sign of overfitting. This is also shows that the logistic regression model performed the best on the data since its AUC is higher with an AUC of 0.7307 vs an AUC of 0.7195.
+I first performed a logistic regression on the numerical variables of the dataset with lfp (labor force participation) as the binary variable to be predicted. The AUC for the logisitic regression model came out to be 0.7307. The AUC (area under curve) quantifies how well we are predicting overall. The AUC for this model isn't that high which means that the performance of the model is fair. I also created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 343 true positives, 85 false negatives, 156 true negatives, and 169 false positives. Then, I performed a k-fold cross validation with 10 folds on the data set with the same variables. The AUC for the k-fold CV came out to be 0.7195 which is a decrease from the AUC of the logistic regression model which is a sign of overfitting. This is also shows that the logistic regression model performed the best on the data since its AUC is higher with an AUC of 0.7307 vs an AUC of 0.7195.
 
 ### Non-Parametric Classifier
 
 ```{R}
 library(caret)
-# non-parametric classifier code here
+
+knn_fit <- knn3(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=mroz)
+
+pred <- predict(knn_fit, mroz)
+
+class_diag(pred[,2], mroz$lfp, positive="TRUE")
+
+# confusion matrix
+y <- mroz$lfp
+table(truth = y, prediction = pred[,2]>.5)
 ```
 
 ```{R}
 # cross-validation of np classifier here
+k = 10 #choose number of folds
+
+data <- mroz[sample(nrow(mroz)),] #randomly order rows
+folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) #create folds
+
+diags <- NULL
+
+for(i in 1:k){
+  ## Create training and test sets
+  train <- data[folds!=i,]
+  test <- data[folds==i,]
+  truth <- test$lfp ## Truth labels for fold i
+  
+  ## Train model on training set (all but fold i)
+  fit <- knn3(lfp=="TRUE" ~ k5 + k618 + age + lwg + inc, data=train)
+  
+  ## Test model on test set (fold i)
+  probs <- predict(fit, newdata = test)[,2]
+  
+  ## Get diagnostics for fold i
+  diags <- rbind(diags, class_diag(probs, truth, positive="TRUE"))
+}
+
+summarize_all(diags,mean)
+
 ```
 
-Discussion
+Here, I performed k-nearest-neighbor as my non-parametric classifier on all the numeric variables of the mrox dataset with labor force participation (lfp) as the response variable. The AUC for this model came out to be 0.7822 which also isn't very high which means that the performance of the model is fair. I then created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 329 true positives, 99 false negatives, 219 true negatives, and 106 false positives. Then, I performed a k-fold cross validation on the model with 10 folds. The AUC for the k-fold CV came out to be 0.5545 which is a clear decrease form the knn model which is a sign of overfitting. This is also shows that the knn model performed better on the data than the k-fold CV since its AUC is much higher with an AUC of 0.7822 vs an AUC of 0.5545. The nonparametric model (knn) performed worse than the linear model (logistic regression) in its cross-validation performance since the AUC is much lower and had a greater decrease. The AUC of the k-fold CV on the nonparametric model came out to be 0.5545 which is very low and indicates that the model performed badly whereas the AUC of the k-fold CV on the linear model came out to be 0.7195 which isn't great either but at least performs fairly. 
+
 
 
 ### Regression/Numeric Prediction
