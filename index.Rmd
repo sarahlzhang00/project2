@@ -150,6 +150,7 @@ table(truth = y, prediction = pred>.5)
 
 ```{R}
 # cross-validation of linear classifier here
+set.seed(1234)
 k=10 #choose number of folds
 
 data <- mroz[sample(nrow(mroz)),] #randomly order rows
@@ -177,7 +178,7 @@ summarize_all(diags,mean)
 
 ```
 
-I first performed a logistic regression on the numerical variables of the dataset with lfp (labor force participation) as the binary variable to be predicted. The AUC for the logisitic regression model came out to be 0.7307. The AUC (area under curve) quantifies how well we are predicting overall. The AUC for this model isn't that high which means that the performance of the model is fair. I also created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 343 true positives, 85 false negatives, 156 true negatives, and 169 false positives. Then, I performed a k-fold cross validation with 10 folds on the data set with the same variables. The AUC for the k-fold CV came out to be 0.7195 which is a decrease from the AUC of the logistic regression model which is a sign of overfitting. This is also shows that the logistic regression model performed the best on the data since its AUC is higher with an AUC of 0.7307 vs an AUC of 0.7195.
+I first performed a logistic regression on the numerical variables, k5, k618, age, lwg, and inc, of the mroz dataset with lfp (labor force participation) as the binary variable to be predicted. The AUC for the logisitic regression model came out to be 0.7307. The AUC (area under curve) quantifies how well we are predicting overall. The AUC for this model isn't that high which means that the performance of the model is fair. I also created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 343 true positives, 85 false negatives, 156 true negatives, and 169 false positives. Then, I performed a k-fold cross validation with 10 folds on the data set with the same variables. The AUC for the k-fold CV came out to be 0.7202 which is a decrease from the AUC of the logistic regression model which is a sign of overfitting. This is also shows that the logistic regression model performed the best on the data since its AUC is higher with an AUC of 0.7307 vs an AUC of 0.7202.
 
 ### Non-Parametric Classifier
 
@@ -197,7 +198,8 @@ table(truth = y, prediction = pred[,2]>.5)
 
 ```{R}
 # cross-validation of np classifier here
-k = 10 #choose number of folds
+set.seed(1234)
+k = 10
 
 data <- mroz[sample(nrow(mroz)),] #randomly order rows
 folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) #create folds
@@ -224,7 +226,7 @@ summarize_all(diags,mean)
 
 ```
 
-Here, I performed k-nearest-neighbor as my non-parametric classifier on all the numeric variables of the mrox dataset with labor force participation (lfp) as the response variable. The AUC for this model came out to be 0.7822 which also isn't very high which means that the performance of the model is fair. I then created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 329 true positives, 99 false negatives, 219 true negatives, and 106 false positives. Then, I performed a k-fold cross validation on the model with 10 folds. The AUC for the k-fold CV came out to be 0.5545 which is a clear decrease form the knn model which is a sign of overfitting. This is also shows that the knn model performed better on the data than the k-fold CV since its AUC is much higher with an AUC of 0.7822 vs an AUC of 0.5545. The nonparametric model (knn) performed worse than the linear model (logistic regression) in its cross-validation performance since the AUC is much lower and had a greater decrease. The AUC of the k-fold CV on the nonparametric model came out to be 0.5545 which is very low and indicates that the model performed badly whereas the AUC of the k-fold CV on the linear model came out to be 0.7195 which isn't great either but at least performs fairly. 
+Here, I performed k-nearest-neighbor as my non-parametric classifier on all the numeric variables, k5, k618, age, lwg, and inc, of the mrox dataset with labor force participation (lfp) as the response variable. The AUC for this model came out to be 0.7822 which also isn't very high which means that the performance of the model is fair. I then created a confusion matrix of the predicted labor force participation positives/negatives against the actual positives/negatives for the full model. The confusion matrix shows that there were 329 true positives, 99 false negatives, 219 true negatives, and 106 false positives. Then, I performed a k-fold cross validation on the model with 10 folds. The AUC for the k-fold CV came out to be 0.56077 which is a clear decrease form the knn model which is a sign of overfitting. This is also shows that the knn model performed better on the data than the k-fold CV since its AUC is much higher with an AUC of 0.7822 vs an AUC of 0.56077. The nonparametric model (knn) performed worse than the linear model (logistic regression) in its cross-validation performance since the AUC is much lower and had a greater decrease. The AUC of the k-fold CV on the nonparametric model came out to be 0.56077 which is very low and indicates that the model performed badly whereas the AUC of the k-fold CV on the linear model came out to be 0.7195 which isn't great either but at least performs fairly. 
 
 
 
@@ -232,13 +234,35 @@ Here, I performed k-nearest-neighbor as my non-parametric classifier on all the 
 
 ```{R}
 # regression model code here
+linear_fit <- lm(inc ~ k5 + k618 + age + lwg, data=mroz) 
+pred <- predict(linear_fit)
+
+mean((mroz$inc-pred)^2)
 ```
 
 ```{R}
 # cross-validation of regression model here
+set.seed(1234)
+k=5
+data <- mroz[sample(nrow(mroz)),]
+folds <- cut(seq(1:nrow(mroz)), breaks=k, labels=F) 
+
+diags <- NULL
+for(i in 1:k){
+  train <- data[folds!=i,]
+  test <- data[folds==i,]
+  
+  fit <- lm(inc ~ k5 + k618 + age + lwg, data=train)
+ 
+  pred <- predict(fit, newdata=test)
+  
+  diags <- mean((test$inc-pred)^2)
+}
+mean(diags)
+
 ```
 
-Discussion
+I performed a linear regression on the mroz dataset, predicting income (inc) from all the other numeric variables, k5, k618, age, and lwg. I calculated the MSE (mean squared error) for the overall dataset which came out to be 131.27. Then, I performed a k-fold cross validation with the same model and same variables using 5 folds. The average MSE across the 5 testing folds came out to be 163.9256 which is much higher than the linear regression MSE which is a sign of overfitting.
 
 ### Python 
 
